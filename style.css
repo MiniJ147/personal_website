@@ -81,6 +81,19 @@ h1{
     margin:15px;
 }
 
+#logo_github{
+    position: absolute;
+    width: 100px;
+    height: 100px;
+    transform: translateX(150px);
+}
+
+github_desc{
+    position: absolute;
+    color: rgb(233, 231, 231);
+    transform: translate(265px,35px);
+}
+
 youtube_desc{
     position: absolute;
     color: rgb(233, 231, 231);
