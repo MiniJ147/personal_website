@@ -88,10 +88,23 @@ h1{
     transform: translateX(150px);
 }
 
+#logo_paypal{
+    position: absolute;
+    width: 100px;
+    height: 100px;
+    transform: translateX(400px);
+}
+
 github_desc{
     position: absolute;
     color: rgb(233, 231, 231);
     transform: translate(265px,35px);
+}
+
+paypal_desc{
+    position: absolute;
+    color: rgb(233, 231, 231);
+    transform: translate(525px,35px);
 }
 
 youtube_desc{
