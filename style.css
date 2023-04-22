@@ -26,10 +26,6 @@ body{
     transform: translate(45%);
 }
 
-#logo_youtube{
-    width:100px;
-}
-
 #section{
     position: relative;
     background-color: rgba(27, 27, 27, 0.877);
@@ -40,10 +36,12 @@ body{
 
 #title{
     height: 100px;
+    max-width: 100%;
+    min-width: 350px;
     background-color: rgba(44, 44, 44, 0.96);
     border: 3px outset rgba(99, 99, 99, 0.87);
     text-align: center;
-    font-size: 96px;
+    font-size: 5.5em;
 }
 
 .about > .desc{
@@ -61,7 +59,8 @@ h1{
     margin-left: -10px;
     background-color: rgba(44, 44, 44, 0.96);
     border: 3px outset rgba(99, 99, 99, 0.87);
-    width: 400px;
+    max-width: 400px;
+    min-width: 365px;
 }
 
 .experience > .box{
@@ -81,40 +80,30 @@ h1{
     margin:15px;
 }
 
-#logo_github{
+.social > .list{
+    position: relative;
+    display: flex;
+    flex-wrap: wrap;
+}
+
+.social > .list div{
+    width: 300px;
+    height: 100px;
+    margin: 10px;
+
+    color:white;
+}
+
+.social > .list img{
     position: absolute;
     width: 100px;
     height: 100px;
-    transform: translateX(150px);
 }
 
-#logo_paypal{
-    position: absolute;
-    width: 100px;
-    height: 100px;
-    transform: translateX(400px);
-}
-
-github_desc{
+.social > .list text{
     position: absolute;
     color: rgb(233, 231, 231);
-    transform: translate(265px,35px);
-}
-
-paypal_desc{
-    position: absolute;
-    color: rgb(233, 231, 231);
-    transform: translate(525px,35px);
-}
-
-youtube_desc{
-    position: absolute;
-    color: rgb(233, 231, 231);
-    transform: translate(5px,35px);
-}
-
-.projects > #title{
-    font-size: 5.0em;
+    transform: translate(100px,35px);
 }
 
 .projects > .list{
