@@ -1,0 +1,52 @@
+header h1 {
+    text-align: center;
+}
+header links {
+    display: flex;
+    align-content: center;
+    justify-content: center;
+    gap: 15px;
+
+    text-decoration: underline;
+    font-weight: bold;
+    font-size: large;
+}
+
+header a {
+    text-decoration: none !important;
+}
+
+body {
+    margin-left: 20%;
+    margin-right: 20%;
+    margin-top: 5%;
+    margin-bottom: 5%;
+
+    font-size: large;
+    word-spacing: 2px;
+
+    font-family: 'Times New Roman', Times, serif;
+}
+
+#books .title {
+    font-weight: bold;
+}
+
+#projects ul div {
+    margin-bottom: 20px;
+}
+
+footer {
+    text-align: center;
+    margin-top: 5%;
+
+    font-style: italic;
+}
+
+@media screen and (max-width: 420px) {
+    body {
+        margin: 5%;
+        font-size: medium;
+    }
+    
+}
