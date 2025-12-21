@@ -32,6 +32,12 @@ body {
     font-weight: bold;
 }
 
+#courses .title {
+    font-weight: bold;
+}
+
+
+
 #projects ul div {
     margin-bottom: 20px;
 }
