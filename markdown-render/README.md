@@ -45,9 +45,9 @@ Preview:\n
 The formatting is very specific.  
 *Title, Published, edited* must be a single line. The spelling and : must be exact. Preview is the only one that can be multiple lines, but the content cannot be on the same line as the *Preview:* declaration.
 
-**Title**  
-**Published**  
-**Edited**  
-**Preview**  
+**Title**: Title for article. Will be clickable on the homepage  
+**Published**: Displayed on the homepage and is used for sorting articles. Displayed on article
+**Edited**: Edited Date displayed on article page
+**Preview**: Shows the preview when hovering the link and displayed on article.
 
 Everything after MetaData will be considered as *markdown* content and will be rendered as such.

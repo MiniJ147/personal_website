@@ -1,0 +1,27 @@
+body {
+    margin-left: 20%;
+    margin-right: 20%;
+    margin-top: 5%;
+    margin-bottom: 5%;
+
+    font-size: large;
+    word-spacing: 2px;
+
+    font-family: 'Times New Roman', Times, serif;
+}
+
+header {
+    text-align: center;
+}
+header p {
+    font-size: medium;
+    font-style: italic;
+}
+
+@media screen and (max-width: 420px) {
+    body {
+        margin: 5%;
+        font-size: medium;
+    }
+    
+}

@@ -2,6 +2,8 @@ import markdown
 from pathlib import Path
 from datetime import datetime
 
+# nl2br --> \n generates <br>
+EXTENSIONS = ['nl2br']
 ARTICLES_DIR = Path("../articles")
 
 def template_inserter(template_file_path: Path, insert_str: str) -> str:
@@ -140,36 +142,61 @@ def generate_article_homepage_html_file(articles: list[Article]):
         file.write(output)
     print("successfully generate homepage")
 
+
+'''
+Example header from an article at the line before
+<header>
+    <h1>{article.title}</h1>
+    <p>Published: December 20, 2025</p>
+    <p>Lasted Edited: December 21, 2025</p>
+    <p style="font-weight: bold;">Preview:</p>
+    <p>Content</p>
+</header>
+'''
 def generate_article_html_file(article: Article):
+    """
+    Given an article object we will generate the respective html file. 
+    
+    :param article: Article Data which we are going to generate HTML for
+    :type article: Article
+    """
     TEMPLATE_FILE = ARTICLES_DIR / Path("template-article.html")
+
+    header = f"<header><h1>{article.title}</h1><p>Published: {article.published_date}</p><p>Lasted Edited: {article.edited_date}</p><p style=\"font-weight: bold;\">Preview:</p><p>{markdown.markdown(article.preview_content, extensions=EXTENSIONS)}</p></header>"
+    main_content = markdown.markdown(article.markdown_content, extensions=EXTENSIONS)
+
+    insert = header+main_content
     
     output = template_inserter(
         TEMPLATE_FILE, 
-        markdown.markdown(article.markdown_content))
+        insert)
  
     OUT_PATH = ARTICLES_DIR / Path(article.directory) / Path("index.html")
     with open(OUT_PATH, 'w') as file:
         file.write(output)
     print("successfully generate article", OUT_PATH)
 
-# html = markdown.markdown("#hello")
-parsed_articles = []
+def main():
+    parsed_articles = []
 
-for entry in ARTICLES_DIR.iterdir():
-    # build all directories
-    if entry.is_dir():
-        # concat root with current article directory
-        parsed_articles.append(
-            parse_markdown_via_article_directory(ARTICLES_DIR / Path(entry.name))) 
+    for entry in ARTICLES_DIR.iterdir():
+        # build all directories
+        if entry.is_dir():
+            # concat root with current article directory
+            parsed_articles.append(
+                parse_markdown_via_article_directory(ARTICLES_DIR / Path(entry.name))) 
 
-# sort articles via most recent via published_time
-parsed_articles.sort(
-    reverse=True, 
-    key=lambda item: item.published_time)
+    # sort articles via most recent via published_time
+    parsed_articles.sort(
+        reverse=True, 
+        key=lambda item: item.published_time)
 
-# step 1: generate article homepage
-generate_article_homepage_html_file(parsed_articles)
+    # step 1: generate article homepage
+    generate_article_homepage_html_file(parsed_articles)
 
-# step 2: generate index.html for each article
-for article in parsed_articles:
-    generate_article_html_file(article)
+    # step 2: generate index.html for each article
+    for article in parsed_articles:
+        generate_article_html_file(article)
+
+if __name__ == "__main__":
+    main()
