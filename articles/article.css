@@ -18,6 +18,11 @@ header p {
     font-style: italic;
 }
 
+img {
+    max-width: 100%;
+    height: auto;
+}
+
 @media screen and (max-width: 420px) {
     body {
         margin: 5%;
