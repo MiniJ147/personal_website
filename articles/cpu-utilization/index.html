@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="../article.css">
+    <title>MiniCS</title> 
+</head>
+<body>
+    <nav>
+        <a href="/">homepage</a>
+        <a href="..">back</a>
+    </nav>
+<header><h1>Understanding Efficient CPU Utilization</h1><p>Published: December 28, 2025</p><p>Lasted Edited: December 28, 2025</p><p style="font-weight: bold;">Preview:</p><p><p>When learning how to write efficient code a critical step is ensuring the most optimal usage of your CPU.<br />
+In this article we will discuss how programmers can take advantage of modern CPU's to the fullest extent<br />
+by maximizing the usage of their CPU.</p></p></header><!--
+Plan:
+Why is understanding CPU utilization import for everyday programers.
+Take the time to define keywords and sources (The Art of Efficient Programming).
+Overview of what we will discuss: 
+(1) Introduction: Why CPU Utilization Matters
+- The real enemy to performance is waiting. (We want to maximize actual CPU use, not wasted instructions)
+- Data dependencies, cache misses, branch mispredictions 
+
+(2) Instruction-Level Parallelism (ILP)
+- Executing multiple independent instructions simultaneously.
+- extracted dynamically by the CPU (out-of-order execution)
+- limited through dependency chains, control flow, memory aliasing (2 variables point to the same location)
+
+(3) Data Dependencies and Dependency Chains
+- Freezes ILP and forces synchronization
+- RAW (Read After Write) (long complicated instructions example)
+
+(4) CPU Pipelining and Hazards
+- What is a pipeline -> instruction broken into stages and multiple instructions are in flight simultaneously '
+- Hazards results in slow downs because it requires stalls
+- Data Hazard (data dependencies), Control Hazards (Branching), Structural Hazards (resource conflicts [need the same hardware])
+
+(5) Branch Prediction
+- CPU attempts to predict where the system will go through pattern recognition
+- Missing predictions result in wasted operations and a pipeline flush
+
+(6) Speculative execution
+- Executing instructions before knowing if they're needed.
+- relies on branch prediction to queue up the instructions
+- keeps execution layers busy
+- only helps when branches are predictable
+
+- (6.5) Branchless computing
+- branchless computing is one way to mitigate these issues (use arithmetic and conditional moves instead of branches)
+- conditional moves will do both calculations but only write one on success (increases resource consumption)
+
+(7) Memory-Level Parallelism (MLP)
+- similar to ILP but for memory access, where it can queue up multiple accesses at one time.
+- however data dependencies destroy MLP,  
+-->
+
+<h3>Table of Contents</h3>
+<ol>
+<li>Introduction: CPU Utilization and Why?</li>
+<li>Instruction-Level Parallelism (ILP)</li>
+<li>Data Dependencies and Dependency Chains</li>
+<li>CPU Pipelining and Hazards</li>
+<li>Branch Prediction and Speculative Execution</li>
+<li>Memory-Level Parallelism (MLP)</li>
+<li>Conclusion</li>
+</ol>
+<h2>1. Introduction: CPU Utilization and Why?</h2>
+<h3>What is CPU Utilization?</h3>
+<p>When learning how to write efficient programs, a critical aspect of that is ensuring efficient CPU utilization. Efficient CPU utilization is about keeping the hardware busy <strong>doing useful work</strong>, rather than wasting time stalled or on wasted instructions. Put simply, it is about squeezing the most out of our CPU per cycle, ensuring full usage of our hardware. In doing so, we can inch closer to the full speed potential of our software.</p>
+<h3>Why Should I Care?</h3>
+<p>Thankfully, modern CPUs employ many techniques which make them incredibly efficient. However, a good programmer must know how the CPU preforms these techniques, so that they can <strong>work with the CPU rather than against it</strong>. </p>
+<p>In this article we will explore how modern CPUs employ these techniques and what you can do to ensure your code is optimal.</p>
+<p><strong>Remember, this is all in the name of SPEED!</strong></p>
+<h3>Quick Reminder</h3>
+<p>However, before we jump into the content please remember the following. Never guess about performance, always have hard metrics backing your claims. Ask should we optimize our code? Then what should we optimize? Please keep into account your goals for your software, you do not want to waste time on pointless optimizations that don't fit your needs. I encourage the reader to understand these questions when thinking about the performance of their software. </p>
+<p><em>A majority of information and examples are references of the book "The Art of Writing Efficient Programs" Chapter 3, and for more detailed information please reference the book.</em></p>
+<h2>2. Instruction-Level Parallelism (ILP)</h2>
+<p>The first technique we will discuss is a concept known as <strong>Instruction-Level Parallelism (ILP)</strong>. </p>
+<p>Lets say I have a program which preforms arithmetic on 2 vectors <code>p1</code> and <code>p2</code>, and I gave you the following code, which one would be faster?  </p>
+<pre><code>// Code 1  
+for(int i = 0; i < N; i++){  
+    sum1 += p1[i] + p2[i];  
+}
+</code></pre>
+
+<pre><code>// Code 2  
+for(int i = 0; i < N; i++){
+    sum1 += p1[i] + p2[i];
+    sum2 += p1[i] * p2[i];
+    sum3 += p1[i] << 2;
+    sum4 += p2[i] - p1[i];
+}</code></pre>
+
+<!--Eventually add my own benchmarks-->
+<p>Well it turns out, on modern processors, they run at roughly the same speed (only differs by 0.1 millisecond, which could be due to measurement error). But how? Well, this is in thanks to <strong>ILP</strong>.  </p>
+<p>If we look at these instructions from an asm level we will see that <code>p1</code> and <code>p2</code> are instantly loaded into registers from memory, and once those are loaded into registers it is negligible to add further calculations on top of it, since we are reusing register values. But even with that fact shouldn't we still expect to see slowdown due to sequential execution? Well, modern processors have multiple computation units, and since we have already loaded these values into registers we can run the extra instructions in parallel with our original addition instruction. Hence the name <em>instruction-level parallelism</em>.</p>
+<p>With this knowledge, if I gave you the following code would our CPU be able to fully utilize ILP (that is every instruction runs in parallel)?</p>
+<pre><code>//more complex example
+// Equivalent to a1 += (p1[i] + p2[i]) * (p1[i] - p2[i])
+for(int i = 0; i < N; i++){  
+    s[i] = (p1[i] * p2[i]);
+    d[i] = (p1[i] - p2[i]);
+    a1[i] = s[i]*d[i];
+}
+</code></pre>
+<p>The answer to this question is <strong>no</strong>. Only lines 1 and 2 can run in parallel, while line 3 must wait. This is due to <strong>Data Dependencies</strong>, which leads us to our next section.</p>
+<h2>3. Data Dependencies and Dependency Chains</h2>
+<p>In the last section we learnt about ILP, but in the last code example I stated that ILP wouldn't fully work due to <strong>Data Dependencies</strong>.  </p>
+<p>A data dependency exists when one instruction <strong>needs the results of another instruction</strong> before it can execute. Take the code below as an example.</p>
+<pre><code>a = b + c
+d = a * 2
+
+/*
+a = 1, b = 1, c = 1
+Correct: (Sequential)   | Incorrect: (Parallel)
+a = 1 + 1 --> a = 2     | a = 1 + 1 => 2
+then,                   | at the same time,
+d = 2 * 2 --> d = 4     | d = 1 * 2 => 2
+*/
+</code></pre>
+
+<p>In this snippet, line 2 cannot run at the same time as line 1, because line 2 uses the value <code>a</code> which is written to by line 1. Meaning if we ran them in parallel line 2 wouldn't receive the changes provided by line 1, making our program incorrect. This is known as a <strong>Read After Write (RAW)</strong> data dependency.</p>
+<p>RAW are worrisome because they are unavoidable, meaning the operation would have to be reworked in order to resolve the issue.</p>
+<p>Other data-dependencies exists, but are largely handled by the hardware  through <strong>register naming</strong> which make them less prevalent, such as <strong>Write After Read (WAR)</strong> and <strong>Write After Write (WAW)</strong>.</p>
+<pre><code>// (WAR)
+d = a + b;
+a = 0;
+==> line 2 writes to A after line 1 reads from a 
+
+// (WAW)
+a = b + c;
+a = d + e;
+==> both lines write to a at the same time
+</code></pre>
+
+<p>The real performance killer is <strong>dependency chains</strong>. A dependency chain is where each instruction depends on the previous one. For example</p>
+<pre><code>x = x + 1;
+x = x + 1;
+....
+x = x + 1;
+</code></pre>
+<p>This results in a chain <code>x1 -&gt; x2 -&gt; .. -&gt; xn</code>, which the CPU cannot parallelize. </p>
+<p>The most common real world example of this would be loop-carried dependencies. For example summing over a vector.</p>
+<pre><code>int sum=0;
+for(int i=0; i < n; i++){
+    sum += arr[i];
+}
+
+// the chain
+sum = sum + arr[0]
+sum = sum + arr[1]
+....
+sum = sum + arr[n-1]
+</code></pre>
+<p>In this example each iteration depends on the previous one, resulting in a long sequential chain <code>s0 -&gt; s1 -&gt; s2 .. -&gt; sn</code>. A way to break this is to use multiple accumulators, a concept known as <em>loop-unrolling</em>, which is a common optimization technique done by compilers.</p>
+<pre><code>int sum1 = sum2 = 0;
+for(int i=0; i < n; i+= 2){
+    sum1 += arr[i];
+    sum2 += arr[i+1]
+}
+int final = sum1 + sum2;
+
+// the chain
+sum1 = sum1 + arr[0] | sum2 = sum2 + arr[1]
+sum1 = sum1 + arr[2] | sum2 = sum2 + arr[3]
+sum1 = sum1 + arr[4] | sum2 = sum2 + arr[5]
+... 
+</code></pre>
+<p>Now our CPU in run both accumulations of sum1 and sum2 in parallel. <em>Obviously this loop would only work on an even length, but this just a simple example which you can build upon</em>.</p>
+<h2>4. CPU Pipelining and Hazards</h2>
+<!--
+Introduce CPU Pipelining:
+CPU pipelining is a technique which allows us to have multiple instructions in flight at the same time.
+A instruction is broken into stages Instruction Fetch (IF) Instruction Decode (ID), Execute (EX), Memory Access (ME), and Write Back (WB).
+
+IF: Retrieves instruction from memory
+ID: interprets the instruction and fetches any required operands (data) from registers
+EX: performs the actual operation or calculates memory address
+ME: Reads from or writes data to the main memory
+WB: Writes the final result of the instruction back into the register
+
+Please note that this is a simple model and modern pipelines are massively complex with many more stages, but they follow the same principle of breaking down a task into smaller, parallel steps. 
+
+Example
+IF-ID-EX-ME-WB
+XX-IF-ID-EX-ME-WB
+
+Explain that the CPU is broken up into multiple components which we don't have to spend idle.
+
+Then Introduce Hazards
+- Hazards results in slow downs because it requires stalls
+- Data Hazard (data dependencies), Control Hazards (Branching), Structural Hazards (resource conflicts [need the same hardware])
+
+Hazards result in our CPU being paused (Bubbles / stalls).
+Data-Hazards are data dependencies discussed early (RAW)
+I1: ADD R1, R2, R3  ; R1 = R2 + R3
+I2: SUB R4, R1, R5  ; uses R1
+Cycle:  1   2   3   4   5   6   7
+--------------------------------
+I1:    IF  ID  EX  ME  WB
+I2:        IF  ID  XX  XX  EX  ME  WB
+
+Control Hazards: occurs when the pipeline does not know which instruction to fetch next due to a branch or jump
+I1: BEQ R1, R2, TARGET
+I2: ADD R3, R4, R5   ; may be wrong path
+
+Cycle:  1   2   3   4   5
+------------------------
+I1:    IF  ID  EX  ME  WB
+I2:        XX  XX  IF  ID  EX  ME  WB (waits for branch to resolve)
+[Delays depend on which stage the branch is resolved in]
+
+Structural Hazards occur when hardware resources are insufficient to support all pipeline stages simultaneously for example a single memory for instructions and data, which modern processor mitigate. 
+
+Overall, the biggest death to performance with pipelining is branching as it prevents the CPU from fully utilizing its pipeline.
+-->
+<p>Another technique which CPUs provide is known as <strong>pipelining</strong>.  </p>
+<p>Instructions can be broken down into multiple stages. In this article we will break an instruction down into 5 main stages: Instruction Fetch (IF), Instruction Decode (ID), Execute (EX), Memory Access (ME), and Write Back (WB).<br />
+IF: Retrieves instruction from memory<br />
+ID: interprets the instruction and fetches any required operands (data) from registers<br />
+EX: performs the actual operation or calculates memory address<br />
+ME: Reads from or writes data to the main memory<br />
+WB: Writes the final result of the instruction back into the register</p>
+<p><em>please note that this is only a simple model and modern pipelines are massively complex with many more stages, but they follow the same principle of breaking down a task into smaller, parallel steps</em>.</p>
+<p>What is unique about breaking an instruction up into these stages is that we can make our CPU modular where there is a unique component for every stage. That means instead of locking the CPU out for each instruction, we can run multiple at the same time.</p>
+<pre><code>//Example
+Cycle:  1   2   3   4   5
+------------------------
+I1:    IF  ID  EX  ME  WB
+I2:        IF  ID  EX  ME  WB
+</code></pre>
+
+<p>While this provides great speed, it is important for us as programmers to write our software in such a way that it enables pipelining, as we must avoid <strong>pipelining hazards (hazards)</strong>.</p>
+<p>Hazards come in 3 forms: Data, Control, and Structural. <strong>Data Hazards</strong> come from data dependencies and dependencies chains. <strong>Control Hazards</strong> occur when the pipeline doesn't know which instruction to fetch next due to a branch or jump. <strong>Structural Hazards</strong> occur when hardware resources are insufficient to support all pipeline stages simultaneously (the programmer does not need to worry about this as its a hardware issue).  </p>
+<p>Hazards results in our CPU having to insert <strong>stalls / bubbles (XX)</strong> which result in the CPU spinning idle. It is important we reduce the number of stalls for optimal efficiency.</p>
+<p>Here is an example of a Data Hazard:</p>
+<pre><code>// data
+Data-Hazards are data dependencies discussed early (RAW)
+I1: ADD R1, R2, R3  ; R1 = R2 + R3
+I2: SUB R4, R1, R5  ; uses R1
+Cycle:  1   2   3   4   5   6   7
+--------------------------------
+I1:    IF  ID  EX  ME  WB
+I2:        IF  ID  XX  XX  EX  ME  WB
+// Must wait for the value to be written back (ID sits idle)
+</pre>
+<p></code></p>
+<p>Here is an example of a Control Hazard:</p>
+<pre><code> //control
+I1: BEQ R1, R2, TARGET
+I2: ADD R3, R4, R5   ; may be wrong path
+
+Cycle:  1   2   3   4   5
+------------------------
+I1:    IF  ID  EX  ME  WB
+I2:        XX  XX  IF  ID  EX  ME  WB (waits for branch to resolve)
+Delays depend on which stage the branch is resolved in
+</pre>
+<p></code></p>
+<p>We have already discussed mitigation techniques for data hazards in the previous section and structural hazards are more of a hardware issue. That leaves us to understand how to handle control hazards. Control hazards are mitigated by the hardware through <strong>branch prediction</strong> and <strong>speculative execution</strong>, but the programmer must know how to write code which leverages these abilities. </p>
+<h2>5. Branch Prediction and Speculative Execution</h2>
+<!--
+Overview to counteract control hazards modern CPUs employ a concept known as branch prediction. T
+hey are historical models which attempt to use pattern recitation to predict which branch you are going to traverse so that they can prefetch the instructions as if we knew we were going down that path. 
+However, if the branch prediction is wrong it results it a lot of waste work, leading to a pipeline flush, where the CPU must clean up all the work it attempted to do. 
+
+Speculative Execution then uses the prefetched instructions from branch prediction to run the instruction ahead of time (as if we knew we were going to take that path). 
+However we suffer the same issues as branch prediction where if we predicted wrong we would have ran incorrect code, which will make the program incorrect and could worst of all crash the program
+(simple for loop showcasing this idea).
+To counteract this is runs the instructions and instead of writing it back to memory it holds it in a limbo state where it will only commit once we know we will take this branch. This is why we call it speculative execution as we are making as we running code which we speculate will run.
+
+How can the programmer optimize this?
+- Write Predictable Branches 
+(usually goes the same way or follows a simple pattern)
+- Separate Hot and Cold Paths
+(Early Exit / Guard Clauses)
+-Reduce Branch Frequency 
+(branchless programming and conditional moves)
+- make loops invariant to conditions
+- compiler optimizations (conditional moves, reordering instructions, remove irrelevant branches)
+
+Branch prediction works best when the future looks like the past write code where that is true.
+
+Programmers assist branch prediction and speculative execution by writing code with predictable control flow, separating hot and cold paths, minimizing unpredictable branches in tight loops, and exposing straight-line execution whenever possible. While modern CPUs dynamically predict and speculate, their effectiveness depends on the regularity and simplicity of branch behavior. Code that reduces control-flow entropy allows speculation to proceed deeper and more accurately, increasing instruction throughput and overall CPU utilization.
+-->
+
+<p>To counteract control hazards CPUs employ a concept known as <strong>branch prediction</strong>.  </p>
+<p>Branch prediction are historical models which attempt to use pattern recognition to predict which branch you are going to traverse. This enables them to prefetch instructions as if it knew your code was going to go down that path. This allows pipelining to be more efficient because not it doesn't have to stall when waiting for a conditional to resolve. However, if the branch prediction is wrong, then we have a lot of wasted work. Since we fetched all the instructions for the wrong path we must flush the pipeline, known as a <strong>pipeline flush</strong>, where the CPU cleans up all the work it attempted to do. Not surprisingly this is a very expensive operation making it incredibly important that we optimize our software for branch prediction.  </p>
+<p>Another technique which works in part with branch prediction is <strong>speculative execution</strong>.  </p>
+<p>Speculative execution runs the instructions prefetched by the branch predictor, and enables good to run ahead of time. However, what happens if we are wrong on our prediction. Branch prediction and just flush the pipeline, but we can't reserve an executed instruction. Meaning an incorrect speculative execution would result in not only a incorrect program, but also could risk a crash. </p>
+<pre><code>For example:
+for(int i = 0; i < N; i++){
+    arr[i] += 1;
+}</code></pre>
+<p>In this serverio we will be branching on <code>i &lt; N</code> and since this is always true for N iterations our branch predictor will then attempt to fetch and execute <code>arr[i+1]</code>. However, on the last iteration where <code>i = N-1</code> we would index into the <code>N</code> position, which is out of bounds. Reading this index would at-least be undefined behavior. So what should we do?</p>
+<p>Well, to counteract a scenario like this, speculative execution will hold the results in a <em>limbo</em> state and will only commit the results if we take the branch. Therefore, if we encounter an error or attempt to write a value we won't actually do so until we have verified that this code will run, and if it doesn't we will simply discard it. <br />
+<em>For this to work the CPU must have special hardware circuits, such as buffers, to store these events temporarily.</em></p>
+<h3>What can the programmer do?</h3>
+<p>Well there are numerous techniques which you can use in-order to reduce branch-misses. I also encourage the reader to explore different optimization techniques as this is only a brief look at just some of the existing techniques. </p>
+<h3>(1) Write Predictable Branches</h3>
+<p>We want to work with the predictor and therefore we should attempt to have predictable branches. This heavily depends on the context of your program, but I will provide a predicable branch vs a unpredictable branch and its up to you to see how you could optimize your own code.  </p>
+<pre><code>// Good Example: Loop Condition
+// very predictable we know we will take work() N times in a row
+for (int i = 0; i < n; i++){
+    work();
+}
+
+// Bad Example: Data-Dependent Branch
+// if arr is random then our predictor accuracy is gonna be ~50%
+// there is no clear concise pattern to find
+if(arr[i] & 1){
+    odd++;
+}
+</code></pre>
+
+<h3>(2) Separate Hot and Cold Paths</h3>
+<p>Helps keep instructions in cache and improves predictor accuracy.</p>
+<pre><code>// Early Exit / Guard Clauses
+// Branch predictor will assume we are always gonna take the hot_path
+// since it is unlikely we hit an error
+if(unlikely(error)){
+    handle_error();
+    return
+}
+
+hot_path();
+</code></pre>
+
+<h3>(3) Reduce Branch Frequency</h3>
+<p>Simple, fewer branches = fewer predictions.<br />
+One technique is branchless programming: branchless selection, loop unrolling, etc...</p>
+<h3>(4) compiler optimizations</h3>
+<p>Trust the compiler, but help it. Modern compilers will attempt to preform many optimizations towards your code. It can easily convert branches to conditional moves, remove irrelevant branches, and reorder instructions. However, there are many things compilers can't pick up, which then it becomes your job to help out the compiler so it can optimize your code.   </p>
+<h3>Overview</h3>
+<p>Branch prediction works best when the future looks like the past write code where that is true.</p>
+<p>Programmers assist branch prediction and speculative execution by writing code with predictable control flow, separating hot and cold paths, minimizing unpredictable branches in tight loops, and exposing straight-line execution whenever possible. While modern CPUs dynamically predict and speculate, their effectiveness depends on the regularity and simplicity of branch behavior. Code that reduces control-flow entropy allows speculation to proceed deeper and more accurately, increasing instruction throughput and overall CPU utilization.</p>
+<h2>6. Memory-Level Parallelism (MLP)</h2>
+<p>Another question that might come up to the curious reader is how does the CPU handle memory loads? Memory loads are very slow compared to the CPU speed and it could be a bottleneck for performance. We could have prefect speculative execution and pipelining, but if we keep having to perform a memory fetch as we encounter each instruction, we could significantly limit the throughput of our system. To counteract this a system was built to fetch memory for instructions ahead of time known as <strong>Memory-Level Parallelism (MLP)</strong>. </p>
+<p>MLP is similar to ILP, but instead of fetching instructions it attempts to fetch the data the instruction will need ahead of time. Therefore once we encounter a instruction we wish to execute we will already have its data accessed. </p>
+<p>Here is a quick example:</p>
+<pre><code>
+Similar to ILP but applied to memory loads. 
+Instead of 
+LOAD A -> USE A
+LOAD B -> USE B
+LOAD C -> USE C
+
+We can instead
+LOAD A, B, C
+-- wait before use if it hasn't arrived
+USE A, B, C
+</code></pre>
+
+<p>This is one of the main reasons linear iteration is so much faster than pointer jumping because the CPU knows ahead of time what memory locations it needs to fetch next and sends memory request far ahead of time.  </p>
+<p>Overall, an efficient programs needs both high ILP and high MLP to be truly efficient.</p>
+<h2>7. Conclusion</h2>
+<p>This article went through a lot of topics and should be used as a reference. I encourage the reader to go research more or experiment to re-enforce these concepts. My future plans for this article are to expand it to include detailed examples, profiler results, and case-studies, but at the moment I just wanted a collection of thoughts regard this material. A lot of this knowledge came from <em>The Art of Writing Efficient Programs</em> and I highly recommend it to anyone wishing to learn this skill. </p>
+<p>If you have any feedback good or bad please feel free to reach out. </p><i>--MiniCS</i>
+</body>
+</html>
