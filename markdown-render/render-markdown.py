@@ -179,12 +179,18 @@ def generate_article_html_file(article: Article):
 def main():
     parsed_articles = []
 
+    # build all directories
     for entry in ARTICLES_DIR.iterdir():
-        # build all directories
-        if entry.is_dir():
-            # concat root with current article directory
-            parsed_articles.append(
-                parse_markdown_via_article_directory(ARTICLES_DIR / Path(entry.name))) 
+        if not entry.is_dir():
+            continue
+        # ensure it is not a skip directory
+        if "[SKIP]" in entry.name:
+            print(f"SKIPPING {entry.name}")
+            continue
+
+        # concat root with current article directory
+        parsed_articles.append(
+            parse_markdown_via_article_directory(ARTICLES_DIR / Path(entry.name))) 
 
     # sort articles via most recent via published_time
     parsed_articles.sort(

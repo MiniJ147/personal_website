@@ -51,3 +51,6 @@ The formatting is very specific.
 **Preview**: Shows the preview when hovering the link and displayed on article.
 
 Everything after MetaData will be considered as *markdown* content and will be rendered as such.
+
+### Skipping Files
+You can skip files from the render by putting `[SKIP]` somewhere in the directory name.
